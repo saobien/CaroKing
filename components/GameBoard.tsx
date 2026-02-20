@@ -9,9 +9,7 @@ import {
 import Animated, {
   useAnimatedStyle,
   withSpring,
-  withTiming,
   useSharedValue,
-  FadeIn,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
@@ -19,9 +17,11 @@ import type { Board, WinResult } from "@/lib/game-logic";
 import { BOARD_SIZE } from "@/lib/game-logic";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const BOARD_PADDING = 12;
-const CELL_SIZE = Math.floor((SCREEN_WIDTH - BOARD_PADDING * 2 - 32) / BOARD_SIZE);
-const BOARD_WIDTH = CELL_SIZE * BOARD_SIZE;
+const BOARD_PADDING = 20;
+const GRID_SIZE = BOARD_SIZE - 1;
+const CELL_SIZE = Math.floor((SCREEN_WIDTH - BOARD_PADDING * 2 - 32) / GRID_SIZE);
+const BOARD_WIDTH = CELL_SIZE * GRID_SIZE;
+const PIECE_SIZE = Math.floor(CELL_SIZE * 0.85);
 
 interface GameBoardProps {
   board: Board;
@@ -40,7 +40,7 @@ function GamePiece({
 }: {
   row: number;
   col: number;
-  value: "X" | "O";
+  value: "black" | "white";
   isWinCell: boolean;
   isLastMove: boolean;
 }) {
@@ -53,37 +53,38 @@ function GamePiece({
     transform: [{ scale: scale.value }],
   }));
 
-  const isBlack = value === "X";
-  const pieceSize = CELL_SIZE - 4;
+  const isBlack = value === "black";
 
   return (
     <Animated.View
       style={[
         {
-          width: pieceSize,
-          height: pieceSize,
-          borderRadius: pieceSize / 2,
+          width: PIECE_SIZE,
+          height: PIECE_SIZE,
+          borderRadius: PIECE_SIZE / 2,
           backgroundColor: isBlack ? Colors.pieceBlack : Colors.pieceWhite,
           borderWidth: 1.5,
-          borderColor: isBlack ? Colors.pieceBlackBorder : Colors.pieceWhiteBorder,
+          borderColor: isBlack ? "rgba(0,0,0,0.8)" : "rgba(200,192,180,0.8)",
           position: "absolute",
-          left: col * CELL_SIZE + 2,
-          top: row * CELL_SIZE + 2,
+          left: col * CELL_SIZE - PIECE_SIZE / 2,
+          top: row * CELL_SIZE - PIECE_SIZE / 2,
         },
         isWinCell && {
           shadowColor: Colors.winGlow,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.9,
-          shadowRadius: 8,
-          elevation: 8,
+          shadowRadius: 10,
+          elevation: 10,
+          borderColor: Colors.winGlow,
+          borderWidth: 2,
         },
         isLastMove &&
           !isWinCell && {
-            shadowColor: isBlack ? "#fff" : "#000",
+            shadowColor: isBlack ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.5)",
             shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.4,
-            shadowRadius: 4,
-            elevation: 4,
+            shadowOpacity: 0.6,
+            shadowRadius: 6,
+            elevation: 5,
           },
         animStyle,
       ]}
@@ -92,12 +93,12 @@ function GamePiece({
         <View
           style={{
             position: "absolute",
-            top: pieceSize * 0.22,
-            left: pieceSize * 0.22,
-            width: pieceSize * 0.2,
-            height: pieceSize * 0.2,
-            borderRadius: pieceSize * 0.1,
-            backgroundColor: "rgba(255,255,255,0.15)",
+            top: PIECE_SIZE * 0.2,
+            left: PIECE_SIZE * 0.2,
+            width: PIECE_SIZE * 0.22,
+            height: PIECE_SIZE * 0.22,
+            borderRadius: PIECE_SIZE * 0.11,
+            backgroundColor: "rgba(255,255,255,0.12)",
           }}
         />
       )}
@@ -105,12 +106,25 @@ function GamePiece({
         <View
           style={{
             position: "absolute",
-            top: pieceSize * 0.22,
-            left: pieceSize * 0.22,
-            width: pieceSize * 0.2,
-            height: pieceSize * 0.2,
-            borderRadius: pieceSize * 0.1,
-            backgroundColor: "rgba(255,255,255,0.5)",
+            top: PIECE_SIZE * 0.2,
+            left: PIECE_SIZE * 0.2,
+            width: PIECE_SIZE * 0.22,
+            height: PIECE_SIZE * 0.22,
+            borderRadius: PIECE_SIZE * 0.11,
+            backgroundColor: "rgba(255,255,255,0.6)",
+          }}
+        />
+      )}
+      {isLastMove && !isWinCell && (
+        <View
+          style={{
+            position: "absolute",
+            top: PIECE_SIZE / 2 - 3,
+            left: PIECE_SIZE / 2 - 3,
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: isBlack ? Colors.accent : Colors.accentDark,
           }}
         />
       )}
@@ -143,7 +157,7 @@ export default function GameBoard({
 
   const gridLines = useMemo(() => {
     const lines: React.ReactNode[] = [];
-    for (let i = 0; i <= BOARD_SIZE; i++) {
+    for (let i = 0; i < BOARD_SIZE; i++) {
       lines.push(
         <View
           key={`h-${i}`}
@@ -171,6 +185,43 @@ export default function GameBoard({
         />
       );
     }
+
+    const starPoints =
+      BOARD_SIZE === 13
+        ? [
+            [3, 3],
+            [3, 9],
+            [9, 3],
+            [9, 9],
+            [6, 6],
+          ]
+        : BOARD_SIZE === 15
+        ? [
+            [3, 3],
+            [3, 11],
+            [11, 3],
+            [11, 11],
+            [7, 7],
+          ]
+        : [];
+
+    for (const [r, c] of starPoints) {
+      lines.push(
+        <View
+          key={`star-${r}-${c}`}
+          style={{
+            position: "absolute",
+            left: c * CELL_SIZE - 3,
+            top: r * CELL_SIZE - 3,
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: Colors.boardLine,
+          }}
+        />
+      );
+    }
+
     return lines;
   }, []);
 
@@ -205,8 +256,8 @@ export default function GameBoard({
             onPress={() => handlePress(r, c)}
             style={{
               position: "absolute",
-              left: c * CELL_SIZE,
-              top: r * CELL_SIZE,
+              left: c * CELL_SIZE - CELL_SIZE / 2,
+              top: r * CELL_SIZE - CELL_SIZE / 2,
               width: CELL_SIZE,
               height: CELL_SIZE,
             }}
@@ -221,14 +272,18 @@ export default function GameBoard({
     <View style={styles.container}>
       <View style={styles.boardShadow}>
         <View style={styles.board}>
-          {gridLines}
-          {pieces}
-          {touchCells}
+          <View style={styles.gridArea}>
+            {gridLines}
+            {pieces}
+            {touchCells}
+          </View>
         </View>
       </View>
     </View>
   );
 }
+
+const HALF_CELL = CELL_SIZE / 2;
 
 const styles = StyleSheet.create({
   container: {
@@ -239,15 +294,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 14,
   },
   board: {
-    width: BOARD_WIDTH,
-    height: BOARD_WIDTH,
+    width: BOARD_WIDTH + CELL_SIZE,
+    height: BOARD_WIDTH + CELL_SIZE,
     backgroundColor: Colors.board,
     borderRadius: 10,
     overflow: "hidden",
+    padding: HALF_CELL,
+  },
+  gridArea: {
+    width: BOARD_WIDTH,
+    height: BOARD_WIDTH,
+    position: "relative",
   },
 });

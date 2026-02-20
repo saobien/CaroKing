@@ -7,7 +7,6 @@ import {
   Pressable,
   Platform,
 } from "react-native";
-import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
@@ -17,8 +16,8 @@ interface GameOverModalProps {
   visible: boolean;
   winner: Player | null;
   isDraw: boolean;
-  playerXName: string;
-  playerOName: string;
+  capturedByBlack: number;
+  capturedByWhite: number;
   onNewGame: () => void;
   onDismiss: () => void;
 }
@@ -27,13 +26,13 @@ export default function GameOverModal({
   visible,
   winner,
   isDraw,
-  playerXName,
-  playerOName,
+  capturedByBlack,
+  capturedByWhite,
   onNewGame,
   onDismiss,
 }: GameOverModalProps) {
-  const winnerName = winner === "X" ? playerXName : playerOName;
-  const isBlack = winner === "X";
+  const playerWon = winner === "black";
+  const aiWon = winner === "white";
 
   const handleNewGame = () => {
     if (Platform.OS !== "web") {
@@ -54,16 +53,15 @@ export default function GameOverModal({
           <View style={styles.iconContainer}>
             {isDraw ? (
               <Ionicons name="remove-outline" size={40} color={Colors.textSecondary} />
+            ) : playerWon ? (
+              <Ionicons name="trophy" size={40} color={Colors.highlight} />
             ) : (
               <View
                 style={[
-                  styles.winPiece,
+                  styles.aiPiece,
                   {
-                    backgroundColor: isBlack ? Colors.pieceBlack : Colors.pieceWhite,
-                    borderColor: isBlack
-                      ? Colors.pieceBlackBorder
-                      : Colors.pieceWhiteBorder,
-                    shadowColor: Colors.winGlow,
+                    backgroundColor: Colors.pieceWhite,
+                    borderColor: Colors.pieceWhiteBorder,
                   },
                 ]}
               />
@@ -71,14 +69,46 @@ export default function GameOverModal({
           </View>
 
           <Text style={styles.title}>
-            {isDraw ? "Draw!" : `${winnerName} Wins!`}
+            {isDraw ? "Hoa!" : playerWon ? "Ban Thang!" : "AI Thang!"}
           </Text>
 
           <Text style={styles.subtitle}>
             {isDraw
-              ? "The board is full. No one wins this round."
-              : "Five in a row achieved!"}
+              ? "Ban co da day. Khong ai thang."
+              : playerWon
+              ? "Xep duoc 5 quan lien tiep!"
+              : "AI da xep duoc 5 quan lien tiep."}
           </Text>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <View
+                style={[
+                  styles.statPiece,
+                  {
+                    backgroundColor: Colors.pieceBlack,
+                    borderColor: "rgba(0,0,0,0.8)",
+                  },
+                ]}
+              />
+              <Text style={styles.statLabel}>Bat</Text>
+              <Text style={styles.statValue}>{capturedByBlack}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <View
+                style={[
+                  styles.statPiece,
+                  {
+                    backgroundColor: Colors.pieceWhite,
+                    borderColor: "rgba(200,192,180,0.8)",
+                  },
+                ]}
+              />
+              <Text style={styles.statLabel}>Bat</Text>
+              <Text style={styles.statValue}>{capturedByWhite}</Text>
+            </View>
+          </View>
 
           <View style={styles.buttons}>
             <Pressable
@@ -90,7 +120,7 @@ export default function GameOverModal({
               onPress={handleNewGame}
             >
               <Ionicons name="refresh" size={20} color="#fff" />
-              <Text style={styles.primaryButtonText}>Play Again</Text>
+              <Text style={styles.primaryButtonText}>Choi Lai</Text>
             </Pressable>
 
             <Pressable
@@ -101,7 +131,7 @@ export default function GameOverModal({
               ]}
               onPress={onDismiss}
             >
-              <Text style={styles.secondaryButtonText}>Review Board</Text>
+              <Text style={styles.secondaryButtonText}>Xem Ban Co</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -137,15 +167,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 20,
   },
-  winPiece: {
+  aiPiece: {
     width: 44,
     height: 44,
     borderRadius: 22,
     borderWidth: 2,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
-    elevation: 8,
   },
   title: {
     fontSize: 26,
@@ -159,8 +185,44 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
     textAlign: "center",
-    marginBottom: 28,
+    marginBottom: 20,
     lineHeight: 22,
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginBottom: 24,
+    gap: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+  },
+  statPiece: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+  },
+  statValue: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: Colors.cardBorder,
   },
   buttons: {
     width: "100%",

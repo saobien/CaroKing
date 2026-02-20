@@ -1,24 +1,26 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useAnimatedStyle,
-  withSpring,
-  useSharedValue,
   withRepeat,
   withTiming,
   Easing,
+  useSharedValue,
+  withSpring,
 } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import type { Player } from "@/lib/game-logic";
 
 interface PlayerIndicatorProps {
   currentPlayer: Player;
-  playerXName: string;
-  playerOName: string;
-  scoreX: number;
-  scoreO: number;
+  capturedByBlack: number;
+  capturedByWhite: number;
+  scorePlayer: number;
+  scoreAI: number;
   winner: Player | null;
   isDraw: boolean;
+  isThinking: boolean;
 }
 
 function PiecePreview({ isBlack, isActive }: { isBlack: boolean; isActive: boolean }) {
@@ -46,7 +48,7 @@ function PiecePreview({ isBlack, isActive }: { isBlack: boolean; isActive: boole
         styles.piecePreview,
         {
           backgroundColor: isBlack ? Colors.pieceBlack : Colors.pieceWhite,
-          borderColor: isBlack ? Colors.pieceBlackBorder : Colors.pieceWhiteBorder,
+          borderColor: isBlack ? "rgba(0,0,0,0.8)" : "rgba(200,192,180,0.8)",
         },
         isActive && {
           shadowColor: isBlack ? "#fff" : Colors.accent,
@@ -60,44 +62,89 @@ function PiecePreview({ isBlack, isActive }: { isBlack: boolean; isActive: boole
   );
 }
 
+function ThinkingDots() {
+  const dot1 = useSharedValue(0.3);
+  const dot2 = useSharedValue(0.3);
+  const dot3 = useSharedValue(0.3);
+
+  React.useEffect(() => {
+    dot1.value = withRepeat(withTiming(1, { duration: 500 }), -1, true);
+    setTimeout(() => {
+      dot2.value = withRepeat(withTiming(1, { duration: 500 }), -1, true);
+    }, 150);
+    setTimeout(() => {
+      dot3.value = withRepeat(withTiming(1, { duration: 500 }), -1, true);
+    }, 300);
+  }, []);
+
+  const s1 = useAnimatedStyle(() => ({ opacity: dot1.value }));
+  const s2 = useAnimatedStyle(() => ({ opacity: dot2.value }));
+  const s3 = useAnimatedStyle(() => ({ opacity: dot3.value }));
+
+  return (
+    <View style={styles.thinkingDots}>
+      <Animated.View style={[styles.dot, s1]} />
+      <Animated.View style={[styles.dot, s2]} />
+      <Animated.View style={[styles.dot, s3]} />
+    </View>
+  );
+}
+
 export default function PlayerIndicator({
   currentPlayer,
-  playerXName,
-  playerOName,
-  scoreX,
-  scoreO,
+  capturedByBlack,
+  capturedByWhite,
+  scorePlayer,
+  scoreAI,
   winner,
   isDraw,
+  isThinking,
 }: PlayerIndicatorProps) {
-  const isXActive = !winner && !isDraw && currentPlayer === "X";
-  const isOActive = !winner && !isDraw && currentPlayer === "O";
+  const isBlackActive = !winner && !isDraw && currentPlayer === "black";
+  const isWhiteActive = !winner && !isDraw && currentPlayer === "white";
 
   return (
     <View style={styles.container}>
-      <View style={[styles.playerCard, isXActive && styles.activeCard]}>
-        <PiecePreview isBlack={true} isActive={isXActive} />
-        <Text
-          style={[styles.playerName, isXActive && styles.activeText]}
-          numberOfLines={1}
-        >
-          {playerXName}
-        </Text>
-        <Text style={styles.score}>{scoreX}</Text>
+      <View style={[styles.playerCard, isBlackActive && styles.activeCard]}>
+        <PiecePreview isBlack={true} isActive={isBlackActive} />
+        <View style={styles.playerInfo}>
+          <Text
+            style={[styles.playerName, isBlackActive && styles.activeText]}
+            numberOfLines={1}
+          >
+            You
+          </Text>
+          <View style={styles.capturedRow}>
+            <Ionicons name="skull-outline" size={11} color={Colors.textSecondary} />
+            <Text style={styles.capturedText}>{capturedByBlack}</Text>
+          </View>
+        </View>
+        <Text style={styles.score}>{scorePlayer}</Text>
       </View>
 
       <View style={styles.vs}>
-        <Text style={styles.vsText}>VS</Text>
+        {isThinking ? (
+          <ThinkingDots />
+        ) : (
+          <Text style={styles.vsText}>VS</Text>
+        )}
       </View>
 
-      <View style={[styles.playerCard, isOActive && styles.activeCard]}>
-        <PiecePreview isBlack={false} isActive={isOActive} />
-        <Text
-          style={[styles.playerName, isOActive && styles.activeText]}
-          numberOfLines={1}
-        >
-          {playerOName}
-        </Text>
-        <Text style={styles.score}>{scoreO}</Text>
+      <View style={[styles.playerCard, isWhiteActive && styles.activeCard]}>
+        <PiecePreview isBlack={false} isActive={isWhiteActive} />
+        <View style={styles.playerInfo}>
+          <Text
+            style={[styles.playerName, isWhiteActive && styles.activeText]}
+            numberOfLines={1}
+          >
+            AI
+          </Text>
+          <View style={styles.capturedRow}>
+            <Ionicons name="skull-outline" size={11} color={Colors.textSecondary} />
+            <Text style={styles.capturedText}>{capturedByWhite}</Text>
+          </View>
+        </View>
+        <Text style={styles.score}>{scoreAI}</Text>
       </View>
     </View>
   );
@@ -108,7 +155,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 16,
   },
   playerCard: {
@@ -118,8 +165,8 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: Colors.card,
     borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
@@ -128,19 +175,32 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(76,175,125,0.08)",
   },
   piecePreview: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 1.5,
   },
-  playerName: {
+  playerInfo: {
     flex: 1,
-    fontSize: 14,
+    gap: 1,
+  },
+  playerName: {
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     color: Colors.textSecondary,
   },
   activeText: {
     color: Colors.text,
+  },
+  capturedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  capturedText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
   },
   score: {
     fontSize: 18,
@@ -148,9 +208,9 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
   vs: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Colors.surface,
     alignItems: "center",
     justifyContent: "center",
@@ -160,5 +220,16 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: Colors.textSecondary,
     letterSpacing: 1,
+  },
+  thinkingDots: {
+    flexDirection: "row",
+    gap: 3,
+    alignItems: "center",
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: Colors.accent,
   },
 });
