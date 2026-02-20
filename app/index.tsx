@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -20,16 +20,11 @@ import GameOverModal from "@/components/GameOverModal";
 import {
   createInitialGameState,
   makeMove,
+  getAIMove,
   type GameState,
   type ScoreState,
-  type Player,
 } from "@/lib/game-logic";
-import {
-  getScores,
-  updateScores,
-  saveGame,
-  getPlayerNames,
-} from "@/lib/storage";
+import { getScores, updateScores, saveGame } from "@/lib/storage";
 
 export default function GameScreen() {
   const insets = useSafeAreaInsets();
@@ -37,76 +32,123 @@ export default function GameScreen() {
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
 
   const [gameState, setGameState] = useState<GameState>(createInitialGameState());
-  const [scores, setScores] = useState<ScoreState>({ playerX: 0, playerO: 0, draws: 0 });
-  const [names, setNames] = useState({ x: "Black", o: "White" });
+  const [scores, setScores] = useState<ScoreState>({
+    playerWins: 0,
+    aiWins: 0,
+    draws: 0,
+  });
   const [showModal, setShowModal] = useState(false);
-  const [modalShownForGame, setModalShownForGame] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     getScores().then(setScores);
-    getPlayerNames().then(setNames);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
+    };
+  }, []);
+
+  const handleGameEnd = useCallback(
+    (newState: GameState) => {
+      const newScores = { ...scores };
+      if (newState.winner) {
+        if (newState.winner.winner === "black") newScores.playerWins++;
+        else newScores.aiWins++;
+      } else {
+        newScores.draws++;
+      }
+      setScores(newScores);
+      updateScores(newScores);
+
+      const gameId =
+        Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      saveGame({
+        id: gameId,
+        date: new Date().toISOString(),
+        winner: newState.winner ? newState.winner.winner : "draw",
+        moveCount: newState.moveCount,
+        capturedByBlack: newState.capturedByBlack,
+        capturedByWhite: newState.capturedByWhite,
+      });
+
+      setTimeout(() => {
+        setShowModal(true);
+      }, 600);
+    },
+    [scores]
+  );
+
+  const runAIMove = useCallback(
+    (currentState: GameState) => {
+      setIsThinking(true);
+      aiTimerRef.current = setTimeout(() => {
+        const aiMove = getAIMove(currentState);
+        if (!aiMove) {
+          setIsThinking(false);
+          return;
+        }
+        const newState = makeMove(currentState, aiMove.row, aiMove.col);
+        setGameState(newState);
+        setIsThinking(false);
+
+        if (Platform.OS !== "web") {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+
+        if (newState.winner || newState.isDraw) {
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(
+              newState.winner?.winner === "black"
+                ? Haptics.NotificationFeedbackType.Success
+                : Haptics.NotificationFeedbackType.Error
+            );
+          }
+          handleGameEnd(newState);
+        }
+      }, 400 + Math.random() * 300);
+    },
+    [handleGameEnd]
+  );
 
   const handleCellPress = useCallback(
     (row: number, col: number) => {
-      if (gameState.winner || gameState.isDraw) return;
+      if (
+        gameState.winner ||
+        gameState.isDraw ||
+        gameState.currentPlayer !== "black" ||
+        isThinking
+      )
+        return;
+
       const newState = makeMove(gameState, row, col);
       if (newState === gameState) return;
       setGameState(newState);
 
       if (newState.winner || newState.isDraw) {
         if (Platform.OS !== "web") {
-          Haptics.notificationAsync(
-            newState.winner
-              ? Haptics.NotificationFeedbackType.Success
-              : Haptics.NotificationFeedbackType.Warning
-          );
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
-
-        const newScores = { ...scores };
-        if (newState.winner) {
-          if (newState.winner.winner === "X") newScores.playerX++;
-          else newScores.playerO++;
-        } else {
-          newScores.draws++;
-        }
-        setScores(newScores);
-        updateScores(newScores);
-
-        const gameId =
-          Date.now().toString() + Math.random().toString(36).substr(2, 9);
-        saveGame({
-          id: gameId,
-          date: new Date().toISOString(),
-          winner: newState.winner ? newState.winner.winner : "draw",
-          moveCount: newState.moveCount,
-          playerXName: names.x,
-          playerOName: names.o,
-        });
-
-        setTimeout(() => {
-          setShowModal(true);
-          setModalShownForGame(true);
-        }, 600);
+        handleGameEnd(newState);
+        return;
       }
+
+      runAIMove(newState);
     },
-    [gameState, scores, names]
+    [gameState, isThinking, handleGameEnd, runAIMove]
   );
 
   const handleNewGame = useCallback(() => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     setGameState(createInitialGameState());
     setShowModal(false);
-    setModalShownForGame(false);
+    setIsThinking(false);
   }, []);
-
-  const handleUndoOrNew = useCallback(() => {
-    if (gameState.winner || gameState.isDraw) {
-      handleNewGame();
-    }
-  }, [gameState, handleNewGame]);
 
   const gameOver = !!gameState.winner || gameState.isDraw;
 
@@ -125,7 +167,7 @@ export default function GameScreen() {
         </View>
 
         <Animated.View entering={FadeIn.duration(400)}>
-          <Text style={styles.headerTitle}>Caro</Text>
+          <Text style={styles.headerTitle}>Caro + Go</Text>
         </Animated.View>
 
         <View style={styles.headerRight}>
@@ -149,12 +191,13 @@ export default function GameScreen() {
         <Animated.View entering={FadeInDown.delay(100).duration(500)}>
           <PlayerIndicator
             currentPlayer={gameState.currentPlayer}
-            playerXName={names.x}
-            playerOName={names.o}
-            scoreX={scores.playerX}
-            scoreO={scores.playerO}
+            capturedByBlack={gameState.capturedByBlack}
+            capturedByWhite={gameState.capturedByWhite}
+            scorePlayer={scores.playerWins}
+            scoreAI={scores.aiWins}
             winner={gameState.winner?.winner ?? null}
             isDraw={gameState.isDraw}
+            isThinking={isThinking}
           />
         </Animated.View>
 
@@ -166,12 +209,15 @@ export default function GameScreen() {
             board={gameState.board}
             winResult={gameState.winner}
             lastMove={gameState.lastMove}
-            disabled={gameOver}
+            disabled={gameOver || isThinking || gameState.currentPlayer !== "black"}
             onCellPress={handleCellPress}
           />
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.actions}>
+        <Animated.View
+          entering={FadeInDown.delay(300).duration(500)}
+          style={styles.actions}
+        >
           {gameOver && (
             <Pressable
               onPress={handleNewGame}
@@ -181,23 +227,50 @@ export default function GameScreen() {
               ]}
             >
               <Ionicons name="refresh" size={20} color="#fff" />
-              <Text style={styles.newGameText}>New Game</Text>
+              <Text style={styles.newGameText}>Van Moi</Text>
             </Pressable>
           )}
 
-          {!gameOver && gameState.moveCount > 0 && (
-            <View style={styles.moveCounter}>
-              <Text style={styles.moveCountText}>
-                Move {gameState.moveCount}
-              </Text>
+          {!gameOver && (
+            <View style={styles.infoRow}>
+              <View style={styles.moveCounter}>
+                <Text style={styles.moveCountText}>
+                  {isThinking
+                    ? "AI dang suy nghi..."
+                    : gameState.moveCount === 0
+                    ? "Cham de dat quan"
+                    : `Nuoc ${gameState.moveCount}`}
+                </Text>
+              </View>
+
+              {gameState.moveCount > 0 && (
+                <Pressable
+                  onPress={handleNewGame}
+                  style={({ pressed }) => [
+                    styles.resetBtn,
+                    pressed && { opacity: 0.6 },
+                  ]}
+                >
+                  <Ionicons
+                    name="refresh-outline"
+                    size={18}
+                    color={Colors.textSecondary}
+                  />
+                </Pressable>
+              )}
             </View>
           )}
 
-          {!gameOver && gameState.moveCount === 0 && (
-            <View style={styles.moveCounter}>
-              <Text style={styles.moveCountText}>Tap to place a piece</Text>
-            </View>
-          )}
+          <View style={styles.rulesHint}>
+            <Ionicons
+              name="information-circle-outline"
+              size={14}
+              color="rgba(245,240,232,0.3)"
+            />
+            <Text style={styles.rulesText}>
+              5 lien tiep thang  |  Bao vay bat quan
+            </Text>
+          </View>
         </Animated.View>
       </ScrollView>
 
@@ -205,8 +278,8 @@ export default function GameScreen() {
         visible={showModal}
         winner={gameState.winner?.winner ?? null}
         isDraw={gameState.isDraw}
-        playerXName={names.x}
-        playerOName={names.o}
+        capturedByBlack={gameState.capturedByBlack}
+        capturedByWhite={gameState.capturedByWhite}
         onNewGame={handleNewGame}
         onDismiss={() => setShowModal(false)}
       />
@@ -224,7 +297,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   headerLeft: {
     width: 44,
@@ -235,7 +308,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
     letterSpacing: -0.5,
@@ -248,8 +321,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     alignItems: "center",
-    gap: 20,
-    paddingTop: 8,
+    gap: 16,
+    paddingTop: 4,
   },
   boardWrapper: {
     alignItems: "center",
@@ -258,6 +331,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     width: "100%",
+    gap: 12,
   },
   newGameButton: {
     flexDirection: "row",
@@ -276,6 +350,11 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: "#fff",
   },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   moveCounter: {
     backgroundColor: Colors.card,
     paddingVertical: 8,
@@ -288,5 +367,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
+  },
+  resetBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  rulesHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  rulesText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(245,240,232,0.3)",
   },
 });

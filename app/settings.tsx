@@ -1,60 +1,30 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
-  TextInput,
   Alert,
   Platform,
-  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
-import {
-  getPlayerNames,
-  savePlayerNames,
-  getScores,
-  resetScores,
-} from "@/lib/storage";
+import { resetScores, clearHistory } from "@/lib/storage";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
 
-  const [nameX, setNameX] = useState("Black");
-  const [nameO, setNameO] = useState("White");
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    getPlayerNames().then((n) => {
-      setNameX(n.x);
-      setNameO(n.o);
-    });
-  }, []);
-
-  const handleSave = useCallback(async () => {
-    const x = nameX.trim() || "Black";
-    const o = nameO.trim() || "White";
-    await savePlayerNames({ x, o });
-    setNameX(x);
-    setNameO(o);
-    if (Platform.OS !== "web") {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }, [nameX, nameO]);
-
   const handleResetScores = useCallback(() => {
-    Alert.alert("Reset Scores", "This will reset all player scores to zero.", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert("Dat lai diem", "Tat ca diem so se tro ve 0.", [
+      { text: "Huy", style: "cancel" },
       {
-        text: "Reset",
+        text: "Dat lai",
         style: "destructive",
         onPress: async () => {
           if (Platform.OS !== "web") {
@@ -66,117 +36,116 @@ export default function SettingsScreen() {
     ]);
   }, []);
 
+  const handleClearHistory = useCallback(() => {
+    Alert.alert("Xoa lich su", "Toan bo lich su se bi xoa.", [
+      { text: "Huy", style: "cancel" },
+      {
+        text: "Xoa",
+        style: "destructive",
+        onPress: async () => {
+          if (Platform.OS !== "web") {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }
+          await clearHistory();
+        },
+      },
+    ]);
+  }, []);
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top + webTopInset,
+          paddingBottom: insets.bottom + webBottomInset,
+        },
+      ]}
     >
-      <View
-        style={[
-          styles.container,
-          {
-            paddingTop: insets.top + webTopInset,
-            paddingBottom: insets.bottom + webBottomInset,
-          },
-        ]}
-      >
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
-          >
-            <Ionicons name="chevron-back" size={24} color={Colors.text} />
-          </Pressable>
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+        >
+          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+        </Pressable>
+        <Text style={styles.title}>Cai Dat</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
-          <Text style={styles.title}>Settings</Text>
-
-          <View style={{ width: 40 }} />
-        </View>
-
-        <View style={styles.content}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Player Names</Text>
-
-            <View style={styles.inputGroup}>
-              <View style={styles.inputRow}>
-                <View
-                  style={[
-                    styles.inputPiece,
-                    {
-                      backgroundColor: Colors.pieceBlack,
-                      borderColor: Colors.pieceBlackBorder,
-                    },
-                  ]}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={nameX}
-                  onChangeText={setNameX}
-                  placeholder="Player 1 name"
-                  placeholderTextColor="rgba(245,240,232,0.3)"
-                  maxLength={16}
-                  returnKeyType="next"
-                />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Luat Choi</Text>
+          <View style={styles.rulesCard}>
+            <View style={styles.ruleRow}>
+              <View style={styles.ruleIcon}>
+                <Ionicons name="grid-outline" size={18} color={Colors.accent} />
               </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.inputRow}>
-                <View
-                  style={[
-                    styles.inputPiece,
-                    {
-                      backgroundColor: Colors.pieceWhite,
-                      borderColor: Colors.pieceWhiteBorder,
-                    },
-                  ]}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={nameO}
-                  onChangeText={setNameO}
-                  placeholder="Player 2 name"
-                  placeholderTextColor="rgba(245,240,232,0.3)"
-                  maxLength={16}
-                  returnKeyType="done"
-                />
+              <View style={styles.ruleContent}>
+                <Text style={styles.ruleTitle}>Ban co 13x13</Text>
+                <Text style={styles.ruleDesc}>
+                  Dat quan tren giao diem giong co Vay
+                </Text>
               </View>
             </View>
-
-            <Pressable
-              onPress={handleSave}
-              style={({ pressed }) => [
-                styles.saveButton,
-                saved && styles.savedButton,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              {saved ? (
-                <Ionicons name="checkmark" size={20} color="#fff" />
-              ) : (
-                <Feather name="check" size={18} color="#fff" />
-              )}
-              <Text style={styles.saveText}>{saved ? "Saved" : "Save Names"}</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Data</Text>
-
-            <Pressable
-              onPress={handleResetScores}
-              style={({ pressed }) => [
-                styles.dangerButton,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Ionicons name="refresh-outline" size={18} color={Colors.danger} />
-              <Text style={styles.dangerText}>Reset Scores</Text>
-            </Pressable>
+            <View style={styles.ruleDivider} />
+            <View style={styles.ruleRow}>
+              <View style={styles.ruleIcon}>
+                <Feather name="target" size={18} color={Colors.accent} />
+              </View>
+              <View style={styles.ruleContent}>
+                <Text style={styles.ruleTitle}>5 quan lien tiep</Text>
+                <Text style={styles.ruleDesc}>
+                  Xep 5 quan hang ngang, doc hoac cheo de thang
+                </Text>
+              </View>
+            </View>
+            <View style={styles.ruleDivider} />
+            <View style={styles.ruleRow}>
+              <View style={styles.ruleIcon}>
+                <Ionicons
+                  name="git-network-outline"
+                  size={18}
+                  color={Colors.accent}
+                />
+              </View>
+              <View style={styles.ruleContent}>
+                <Text style={styles.ruleTitle}>Bat quan</Text>
+                <Text style={styles.ruleDesc}>
+                  Bao vay quan doi phuong het khi (giong co Vay) de bat
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Du Lieu</Text>
+
+          <Pressable
+            onPress={handleResetScores}
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Ionicons name="refresh-outline" size={18} color={Colors.danger} />
+            <Text style={styles.actionText}>Dat lai diem so</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={handleClearHistory}
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+            <Text style={styles.actionText}>Xoa lich su</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -204,7 +173,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   content: {
-    flex: 1,
     padding: 16,
     gap: 28,
   },
@@ -219,56 +187,49 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     paddingLeft: 4,
   },
-  inputGroup: {
+  rulesCard: {
     backgroundColor: Colors.card,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
     overflow: "hidden",
   },
-  inputRow: {
+  ruleRow: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    alignItems: "flex-start",
+    padding: 14,
     gap: 12,
   },
-  inputPiece: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_500Medium",
-    color: Colors.text,
-    padding: 0,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.cardBorder,
-    marginLeft: 48,
-  },
-  saveButton: {
-    flexDirection: "row",
+  ruleIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Colors.surface,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.accent,
-    paddingVertical: 14,
-    borderRadius: 14,
-    gap: 8,
+    marginTop: 2,
   },
-  savedButton: {
-    backgroundColor: Colors.accentDark,
+  ruleContent: {
+    flex: 1,
+    gap: 2,
   },
-  saveText: {
+  ruleTitle: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-    color: "#fff",
+    color: Colors.text,
   },
-  dangerButton: {
+  ruleDesc: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  ruleDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.cardBorder,
+    marginLeft: 58,
+  },
+  actionButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -277,9 +238,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     gap: 8,
     borderWidth: 1,
-    borderColor: "rgba(232,93,93,0.2)",
+    borderColor: "rgba(232,93,93,0.15)",
   },
-  dangerText: {
+  actionText: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: Colors.danger,

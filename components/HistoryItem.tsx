@@ -10,33 +10,36 @@ interface HistoryItemProps {
 
 export default function HistoryItem({ record }: HistoryItemProps) {
   const isDraw = record.winner === "draw";
-  const winnerName =
-    record.winner === "X"
-      ? record.playerXName
-      : record.winner === "O"
-      ? record.playerOName
-      : null;
+  const playerWon = record.winner === "black";
 
   const date = new Date(record.date);
-  const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const dateStr = date.toLocaleDateString([], { month: "short", day: "numeric" });
+  const timeStr = date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const dateStr = date.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  });
 
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
         {isDraw ? (
-          <Ionicons name="remove-circle-outline" size={24} color={Colors.textSecondary} />
+          <Ionicons
+            name="remove-circle-outline"
+            size={24}
+            color={Colors.textSecondary}
+          />
+        ) : playerWon ? (
+          <Ionicons name="trophy" size={22} color={Colors.highlight} />
         ) : (
           <View
             style={[
-              styles.winnerPiece,
+              styles.aiPiece,
               {
-                backgroundColor:
-                  record.winner === "X" ? Colors.pieceBlack : Colors.pieceWhite,
-                borderColor:
-                  record.winner === "X"
-                    ? Colors.pieceBlackBorder
-                    : Colors.pieceWhiteBorder,
+                backgroundColor: Colors.pieceWhite,
+                borderColor: "rgba(200,192,180,0.8)",
               },
             ]}
           />
@@ -45,14 +48,12 @@ export default function HistoryItem({ record }: HistoryItemProps) {
 
       <View style={styles.content}>
         <Text style={styles.result} numberOfLines={1}>
-          {isDraw
-            ? `${record.playerXName} vs ${record.playerOName}`
-            : `${winnerName} won`}
+          {isDraw ? "Hoa" : playerWon ? "Ban thang" : "AI thang"}
         </Text>
         <Text style={styles.detail}>
-          {isDraw ? "Draw" : `vs ${record.winner === "X" ? record.playerOName : record.playerXName}`}
+          {record.moveCount} nuoc
           {" \u00B7 "}
-          {record.moveCount} moves
+          Bat: {record.capturedByBlack}/{record.capturedByWhite}
         </Text>
       </View>
 
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  winnerPiece: {
+  aiPiece: {
     width: 22,
     height: 22,
     borderRadius: 11,

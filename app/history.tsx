@@ -12,7 +12,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import HistoryItem from "@/components/HistoryItem";
 import type { GameRecord } from "@/lib/game-logic";
@@ -38,10 +38,10 @@ export default function HistoryScreen() {
   }, [loadHistory]);
 
   const handleClear = useCallback(() => {
-    Alert.alert("Clear History", "Are you sure you want to delete all game history?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert("Xoa lich su", "Ban co chac muon xoa toan bo lich su?", [
+      { text: "Huy", style: "cancel" },
       {
-        text: "Clear",
+        text: "Xoa",
         style: "destructive",
         onPress: async () => {
           if (Platform.OS !== "web") {
@@ -73,7 +73,7 @@ export default function HistoryScreen() {
           <Ionicons name="chevron-back" size={24} color={Colors.text} />
         </Pressable>
 
-        <Text style={styles.title}>History</Text>
+        <Text style={styles.title}>Lich Su</Text>
 
         {history.length > 0 ? (
           <Pressable
@@ -94,9 +94,9 @@ export default function HistoryScreen() {
             size={48}
             color={Colors.textSecondary}
           />
-          <Text style={styles.emptyTitle}>No games yet</Text>
+          <Text style={styles.emptyTitle}>Chua co van nao</Text>
           <Text style={styles.emptySubtitle}>
-            Play your first game to see it here
+            Choi van dau tien de bat dau ghi lai
           </Text>
         </View>
       ) : (
@@ -165,5 +165,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
+    textAlign: "center",
   },
 });
