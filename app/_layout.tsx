@@ -13,6 +13,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
+import { ThemeProvider } from "@/lib/theme-context";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +29,7 @@ function RootLayoutNav() {
       <Stack.Screen name="index" />
       <Stack.Screen name="history" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="online" />
     </Stack>
   );
 }
@@ -51,11 +53,13 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView>
-          <KeyboardProvider>
-            <RootLayoutNav />
-          </KeyboardProvider>
-        </GestureHandlerRootView>
+        <ThemeProvider>
+          <GestureHandlerRootView>
+            <KeyboardProvider>
+              <RootLayoutNav />
+            </KeyboardProvider>
+          </GestureHandlerRootView>
+        </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

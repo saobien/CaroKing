@@ -172,6 +172,12 @@ export default function GameScreen() {
 
         <View style={styles.headerRight}>
           <Pressable
+            onPress={() => router.push("/online")}
+            style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}
+          >
+            <Ionicons name="globe-outline" size={22} color={Colors.textSecondary} />
+          </Pressable>
+          <Pressable
             onPress={() => router.push("/settings")}
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}
           >
@@ -304,8 +310,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   headerRight: {
-    width: 44,
-    alignItems: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 0,
   },
   headerTitle: {
     fontSize: 20,

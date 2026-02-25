@@ -3,6 +3,7 @@ import type { GameRecord, ScoreState } from "./game-logic";
 
 const HISTORY_KEY = "caro_go_history";
 const SCORES_KEY = "caro_go_scores";
+const USERNAME_KEY = "caro_go_username";
 
 export async function getHistory(): Promise<GameRecord[]> {
   const raw = await AsyncStorage.getItem(HISTORY_KEY);
@@ -34,4 +35,12 @@ export async function resetScores(): Promise<void> {
     SCORES_KEY,
     JSON.stringify({ playerWins: 0, aiWins: 0, draws: 0 })
   );
+}
+
+export async function getUsername(): Promise<string | null> {
+  return AsyncStorage.getItem(USERNAME_KEY);
+}
+
+export async function saveUsername(username: string): Promise<void> {
+  await AsyncStorage.setItem(USERNAME_KEY, username);
 }

@@ -20,6 +20,7 @@ interface GameOverModalProps {
   capturedByWhite: number;
   onNewGame: () => void;
   onDismiss: () => void;
+  customMessage?: string;
 }
 
 export default function GameOverModal({
@@ -30,9 +31,9 @@ export default function GameOverModal({
   capturedByWhite,
   onNewGame,
   onDismiss,
+  customMessage,
 }: GameOverModalProps) {
   const playerWon = winner === "black";
-  const aiWon = winner === "white";
 
   const handleNewGame = () => {
     if (Platform.OS !== "web") {
@@ -40,6 +41,20 @@ export default function GameOverModal({
     }
     onNewGame();
   };
+
+  const titleText = customMessage
+    ? customMessage
+    : isDraw
+    ? "Hòa!"
+    : playerWon
+    ? "Bạn Thắng!"
+    : "Bạn Thua!";
+
+  const subtitleText = isDraw
+    ? "Bàn cờ đã đầy. Không ai thắng."
+    : playerWon
+    ? "Xếp được 5 quân liên tiếp!"
+    : "Đối thủ xếp được 5 quân liên tiếp.";
 
   return (
     <Modal
@@ -68,17 +83,11 @@ export default function GameOverModal({
             )}
           </View>
 
-          <Text style={styles.title}>
-            {isDraw ? "Hoa!" : playerWon ? "Ban Thang!" : "AI Thang!"}
-          </Text>
+          <Text style={styles.title}>{titleText}</Text>
 
-          <Text style={styles.subtitle}>
-            {isDraw
-              ? "Ban co da day. Khong ai thang."
-              : playerWon
-              ? "Xep duoc 5 quan lien tiep!"
-              : "AI da xep duoc 5 quan lien tiep."}
-          </Text>
+          {!customMessage && (
+            <Text style={styles.subtitle}>{subtitleText}</Text>
+          )}
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
@@ -91,7 +100,7 @@ export default function GameOverModal({
                   },
                 ]}
               />
-              <Text style={styles.statLabel}>Bat</Text>
+              <Text style={styles.statLabel}>Bắt</Text>
               <Text style={styles.statValue}>{capturedByBlack}</Text>
             </View>
             <View style={styles.statDivider} />
@@ -105,7 +114,7 @@ export default function GameOverModal({
                   },
                 ]}
               />
-              <Text style={styles.statLabel}>Bat</Text>
+              <Text style={styles.statLabel}>Bắt</Text>
               <Text style={styles.statValue}>{capturedByWhite}</Text>
             </View>
           </View>
@@ -120,7 +129,7 @@ export default function GameOverModal({
               onPress={handleNewGame}
             >
               <Ionicons name="refresh" size={20} color="#fff" />
-              <Text style={styles.primaryButtonText}>Choi Lai</Text>
+              <Text style={styles.primaryButtonText}>Chơi Lại</Text>
             </Pressable>
 
             <Pressable
@@ -131,7 +140,7 @@ export default function GameOverModal({
               ]}
               onPress={onDismiss}
             >
-              <Text style={styles.secondaryButtonText}>Xem Ban Co</Text>
+              <Text style={styles.secondaryButtonText}>Xem Bàn Cờ</Text>
             </Pressable>
           </View>
         </Pressable>

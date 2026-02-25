@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import type { Board, WinResult } from "@/lib/game-logic";
 import { BOARD_SIZE } from "@/lib/game-logic";
+import { useBoardTheme } from "@/lib/theme-context";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const BOARD_PADDING = 20;
@@ -139,6 +140,8 @@ export default function GameBoard({
   disabled,
   onCellPress,
 }: GameBoardProps) {
+  const { theme } = useBoardTheme();
+
   const winCellSet = useMemo(() => {
     if (!winResult) return new Set<string>();
     return new Set(winResult.cells.map((c) => `${c.row}-${c.col}`));
@@ -167,7 +170,7 @@ export default function GameBoard({
             left: 0,
             right: 0,
             height: StyleSheet.hairlineWidth,
-            backgroundColor: Colors.boardLine,
+            backgroundColor: theme.boardLine,
           }}
         />
       );
@@ -180,7 +183,7 @@ export default function GameBoard({
             top: 0,
             bottom: 0,
             width: StyleSheet.hairlineWidth,
-            backgroundColor: Colors.boardLine,
+            backgroundColor: theme.boardLine,
           }}
         />
       );
@@ -216,14 +219,14 @@ export default function GameBoard({
             width: 6,
             height: 6,
             borderRadius: 3,
-            backgroundColor: Colors.boardLine,
+            backgroundColor: theme.starPoint,
           }}
         />
       );
     }
 
     return lines;
-  }, []);
+  }, [theme]);
 
   const pieces = useMemo(() => {
     const result: React.ReactNode[] = [];
@@ -271,7 +274,12 @@ export default function GameBoard({
   return (
     <View style={styles.container}>
       <View style={styles.boardShadow}>
-        <View style={styles.board}>
+        <View
+          style={[
+            styles.board,
+            { backgroundColor: theme.board },
+          ]}
+        >
           <View style={styles.gridArea}>
             {gridLines}
             {pieces}
@@ -301,7 +309,6 @@ const styles = StyleSheet.create({
   board: {
     width: BOARD_WIDTH + CELL_SIZE,
     height: BOARD_WIDTH + CELL_SIZE,
-    backgroundColor: Colors.board,
     borderRadius: 10,
     overflow: "hidden",
     padding: HALF_CELL,
