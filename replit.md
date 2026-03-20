@@ -50,12 +50,26 @@ Preferred communication style: Simple, everyday language.
 - **Production build**: `expo:static:build` creates a static web bundle; `server:build` bundles the server with esbuild
 - **Production run**: `server:prod` serves the built static files and API
 
+### Board Themes
+- Defined in `constants/themes.ts` — 5 themes: Forest (default dark green), Wood (warm tan), Ocean (dark blue), Night (near black), Stone (gray)
+- Persisted via AsyncStorage; selected via `useBoardTheme()` from `lib/theme-context.tsx`
+- `GameBoard` uses theme colors (board, boardLine, starPoint) from the active theme
+
+### Online Multiplayer
+- **WebSocket server**: `server/game-server.ts` — manages lobby queue, matchmaking, real-time move relay, resign/disconnect handling
+- **Client connection**: `lib/server-url.ts` — auto-detects WebSocket URL using `EXPO_PUBLIC_DOMAIN` env var (`wss://{REPLIT_DEV_DOMAIN}:5000/ws`)
+- **Game screen**: `app/online.tsx` — username entry, find opponent, real-time board play vs human opponent
+- No OAuth required; players use a display username stored in AsyncStorage
+
 ### Key Components
-- `GameBoard` — Renders the Go-style board grid with animated piece placement
+- `GameBoard` — Renders the Go-style board grid with animated piece placement; uses active board theme colors
 - `PlayerIndicator` — Shows current turn, scores, and captured pieces
-- `GameOverModal` — Win/loss/draw overlay with new game option
+- `GameOverModal` — Win/loss/draw overlay with new game option; supports custom messages for online play
 - `HistoryItem` — Displays individual game records in the history list
 - `ErrorBoundary` / `ErrorFallback` — Error handling with restart capability
+
+### Author
+- Email: saobien.me@gmail.com (displayed in Settings → Tác Giả section)
 
 ## External Dependencies
 
